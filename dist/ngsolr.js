@@ -72,8 +72,8 @@ app.config(['$routeProvider', function($routeProvider) {
 angular
     .module('ngSolr')
     .controller('DateFacetController',
-        ['$scope','$attrs','$location','$route','$routeParams','SolrSearchService','Utils',
-        function ($scope, $attrs, $location, $route, $routeParams, SolrSearchService, Utils) {
+        ['$scope','$attrs','$location','$route','$routeParams','SolrSearchService','Utils', '$rootScope' ,
+        function ($scope, $attrs, $location, $route, $routeParams, SolrSearchService, Utils , $rootScope) {
 
     var date, dateRange, endDateQuery, endDateResults, end_value, end_year,
         f, hash, i, item, query, start_value, start_year, startDateQuery,
@@ -232,7 +232,7 @@ angular
         // apply configured attributes
         Utils.applyAttributes($attrs, $scope);
         // handle location change event, update query results
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() { 
             $scope.handleUpdate();
         });
         // listen for updates on queries
@@ -306,8 +306,8 @@ angular
 angular
     .module('ngSolr')
     .controller('DateFacetHistogramController',
-        ['$scope','$attrs','$location','$log','$route','$routeParams','SolrSearchService','Utils',
-        function ($scope, $attrs, $location, $log, $route, $routeParams, SolrSearchService, Utils) {
+        ['$scope','$attrs','$location','$log','$route','$routeParams','SolrSearchService','Utils', '$rootScope',
+        function ($scope, $attrs, $location, $log, $route, $routeParams, SolrSearchService, Utils , $rootScope ) {
 
     var bin, count, date, endDateResults, i, item, query, startDateResults, userquery;
 
@@ -460,7 +460,7 @@ angular
         // apply configured attributes
         Utils.applyAttributes($attrs, $scope);
         // handle location change event, update query results
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() {
             $scope.query = ($routeParams.query || '');
             if ($scope.query) {
                 var query = SolrSearchService.getQueryFromHash($scope.query, $scope.source);
@@ -639,8 +639,8 @@ angular
 angular
     .module('ngSolr')
     .controller('DocumentSearchResultsController',
-        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService','Utils',
-        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService, Utils) {
+        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService','Utils', '$rootScope' ,
+        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService, Utils , $rootScope) {
 
     // document search results
     $scope.documents = [];
@@ -651,6 +651,7 @@ angular
     // flag for when the controller has submitted a query and is waiting on a
     // response
     $scope.loading = false;
+    //$scope.loading = true;
 
     // the current search result page
     $scope.page = 0;
@@ -674,7 +675,7 @@ angular
     $scope.totalPages = 1;
 
     // count of the total number of search results
-    $scope.totalResults = 0;
+    $scope.totalResults = -1;
 
     // count of the number of search result sets
     $scope.totalSets = 1;
@@ -684,6 +685,8 @@ angular
 
     // user query
     $scope.userquery = '';
+
+    $scope.noresults = false;
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -706,10 +709,16 @@ angular
         var query = SolrSearchService.getQuery($scope.queryName);
         var oldHash = query.getHash();
         query.setOption('start', Start * $scope.documentsPerPage);
+
+
         if ($scope.updateLocationOnChange) {
+            $scope.loading = true;
             var hash = query.getHash();
             $location.path($location.path().replace(oldHash, hash));
+
             $window.scrollTo(0, 0);
+            //$route.reload();
+            //console.log ("Opt1");
         } else {
             $scope.loading = true;
             SolrSearchService.updateQuery($scope.queryName);
@@ -722,11 +731,15 @@ angular
     $scope.handleUpdate = function() {
         // clear current results
         $scope.documents = [];
-        $scope.loading = false;
+        //$scope.loading = false;
+        $scope.loading = true;
         // get new results
         var results = SolrSearchService.getResponse($scope.queryName);
         if (results && results.docs) {
+            $scope.loading = false;
+
             $scope.totalResults = results.numFound;
+
             // calculate the total number of pages and sets
             $scope.totalPages = Math.ceil($scope.totalResults / $scope.documentsPerPage);
             $scope.totalSets = Math.ceil($scope.totalPages / $scope.pagesPerSet);
@@ -743,6 +756,7 @@ angular
             $scope.totalResults = 0;
             $scope.totalPages = 1;
             $scope.totalSets = 1;
+            $scope.noresults = true;
         }
         // update the page index
         $scope.updatePageIndex();
@@ -763,11 +777,12 @@ angular
                     $scope[key] = $attrs[key];
                 }
             }
+
         }
         // handle location change event, update query results
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() {
             // if there is a query in the current location
-            $scope.query = ($routeParams.query || '');
+            $scope.query = ( $route.current.params.query || '');
             if ($scope.query) {
                 // reset state
                 $scope.loading = false;
@@ -854,8 +869,8 @@ angular
  * @param SolrSearchService Solr search service
  */
 angular.module('ngSolr').controller('FacetSelectionController',
-    ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService',
-    function ($scope, $attrs, $location, $route, $routeParams, $window,  SolrSearchService) {
+    ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService', '$rootScope' ,
+    function ($scope, $attrs, $location, $route, $routeParams, $window,  SolrSearchService , $rootScope ) {
 
     var hash, key, query;
 
@@ -887,7 +902,7 @@ angular.module('ngSolr').controller('FacetSelectionController',
      * Update the controller state.
      */
     $scope.handleUpdate = function() {
-        hash = ($routeParams.query || '');
+        hash = ($route.current.params.query || '');
         query = SolrSearchService.getQueryFromHash(hash, $scope.source);
         if (query) {
             $scope.items = query.getFacets();
@@ -912,6 +927,8 @@ angular.module('ngSolr').controller('FacetSelectionController',
 
     // initialize the controller
     $scope.init();
+    $scope.handleUpdate();
+   // $scope.handleUpdate();
 
 }]);
 
@@ -937,8 +954,8 @@ angular.module('ngSolr').controller('FacetSelectionController',
 angular
     .module('ngSolr')
     .controller('FieldFacetController',
-        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService',
-        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService) {
+        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService', '$rootScope' ,
+        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService , $rootScope) {
 
     var count, f, facet, facet_fields, facets, facet_query, hash, i, key, name, query, results, s, selected_values, value;
 
@@ -1066,6 +1083,7 @@ angular
                     count = results.facet_fields[$scope.field][i+1];
                     facet = new FacetResult(value,count);
                     $scope.items.push(facet);
+                    
                 }
             }
         }
@@ -1087,9 +1105,9 @@ angular
             $scope.handleUpdate();
         });
         // update the list of facets on route change
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() {
             // create a query to get the list of facets
-            hash = ($routeParams.query || undefined);
+            hash = ($route.current.params.query || undefined);
             if (hash) {
                 query = SolrSearchService.getQueryFromHash(hash, $scope.source);
             } else {
@@ -1126,8 +1144,8 @@ angular
  * @param SolrSearchService Solr search service.
  */
 angular.module('ngSolr').controller('ImageSearchResultsController',
-        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService',
-        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService) {
+        ['$scope','$attrs','$location','$route','$routeParams','$window','SolrSearchService', '$rootScope' ,
+        function ($scope, $attrs, $location, $route, $routeParams, $window, SolrSearchService , $rootScope) {
 
     // the number of items per page
     $scope.documentsPerPage = 16;
@@ -1191,6 +1209,7 @@ angular.module('ngSolr').controller('ImageSearchResultsController',
      */
     $scope.handleSetPage = function(Start) {
         var query = SolrSearchService.getQuery($scope.queryName);
+       
         query.setOption('start', Start * $scope.documentsPerPage);
         var hash = query.getHash();
         $location.path(hash);
@@ -1253,7 +1272,7 @@ angular.module('ngSolr').controller('ImageSearchResultsController',
             $scope.handleUpdate();
         });
         // handle location change event, update query results
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() {
             // if there is a query in the current location
             $scope.query = ($routeParams.query || '');
             if ($scope.query) {
@@ -1343,8 +1362,8 @@ angular.module('ngSolr').controller('ImageSearchResultsController',
  * @param Utils Utility functions
  */
 angular.module('ngSolr').controller('MapController',
-    ['$scope','$attrs','$location','$log','$route','$routeParams','SolrSearchService','SelectionSetService','Utils',
-    function ($scope, $attrs, $location, $log, $route, $routeParams, SolrSearchService, SelectionSetService, Utils) {
+    ['$scope','$attrs','$location','$log','$route','$routeParams','SolrSearchService','SelectionSetService','Utils', '$rootScope' ,
+    function ($scope, $attrs, $location, $log, $route, $routeParams, SolrSearchService, SelectionSetService, Utils , $rootScope ) {
 
     var i, lat, lng;
 
@@ -1567,7 +1586,7 @@ angular.module('ngSolr').controller('MapController',
             $scope.handleSelection();
         });
         // handle location change event, update query results
-        $scope.$on('$routeChangeSuccess', function() {
+        $scope.$on('$locationChangeSuccess', function() {
             // if there is a query in the current location
             $scope.query = ($routeParams.query || '');
             if ($scope.query) {
@@ -1841,7 +1860,7 @@ angular
                     }
                 }
                 // handle location change event, update query value
-                $scope.$on('$routeChangeSuccess', function () {
+                $scope.$on('$locationChangeSuccess', function () {
                     hash = ($routeParams.query || '');
                     if (hash !== '') {
                         query = SolrSearchService.getQueryFromHash(hash, $scope.source);
@@ -2235,7 +2254,7 @@ angular
                         scope.query_input.onblur = scope.onblur;
                         scope.query_input.onkeyup = scope.onkeyup;
                         // handle location change event, update query value
-                        scope.$on('$routeChangeSuccess', function() { scope.handleRouteChange(); });
+                        scope.$on('$locationChangeSuccess', function() { scope.handleRouteChange(); });
                         // handle update events on the hints query
                         scope.$on(scope.searchHintsQuery, scope.handleUpdate);
                     };
@@ -2504,7 +2523,7 @@ angular
  * Maintains a selection set and notifies listeners when changes occur to the
  * set.
  * @param $scope Controller scope
- * @param $rootScope Root scope
+ * @param $scope Root scope
  * @todo consider having a default and named selection sets
  */
 angular
@@ -3212,10 +3231,12 @@ angular
                         if (data.hasOwnProperty('facet_counts')) {
                             query.setFacetCounts(data.facet_counts);
                         }
+
                         query.setResponse(data.response);
                         query.setResponseHeader(data.responseHeader);
                         // notify listeners of changes
                         $rootScope.$broadcast(QueryName);
+
                     },
                     // error
                     function (error) {
