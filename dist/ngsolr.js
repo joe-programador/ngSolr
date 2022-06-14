@@ -779,10 +779,35 @@ angular
             }
 
         }
+        console.log ("CHANGE SOLR SCOPE");
+        console.log ($scope);
+        console.log ($scope.$parent);
+        
+        if ($scope.$parent.updatePath){
+        $scope.$parent.$watch('updatePath', function (newVal, oldVal, scope) { 
+            console.log ("Change UpdatePath", newVal , oldVal , scope );
+             renderData ();
+
+         });
+        } else {
+
         // handle location change event, update query results
+         $scope.$parent.$parent.$on('routeChangeSuccess', function() {
+            console.log ("CHANGE PARENT PARENT");
+           
+        });
+
         $scope.$on('$locationChangeSuccess', function() {
+            renderData ();
+           
+        });
+        }
+
+        function renderData () { console.log ("CHANGE SOLR: ");
+            console.log ($route.current.params.query);
             // if there is a query in the current location
             $scope.query = ( $route.current.params.query || '');
+
             if ($scope.query) {
                 // reset state
                 $scope.loading = false;
@@ -800,7 +825,7 @@ angular
                 $scope.loading = true;
                 SolrSearchService.updateQuery($scope.queryName);
             }
-        });
+        }
         // handle update events from the search service
         $scope.$on($scope.queryName, function () {
             $scope.handleUpdate();
@@ -1104,8 +1129,28 @@ angular
         $scope.$on($scope.facetQuery, function () {
             $scope.handleUpdate();
         });
-        // update the list of facets on route change
+        if ($scope.$parent.updatePath){
+        $scope.$parent.$watch('updatePath', function (newVal, oldVal, scope) { 
+            console.log ("Change UpdatePath", newVal , oldVal , scope );
+             renderData ();
+
+         });
+        } else {
+
+        // handle location change event, update query results
+         $scope.$parent.$parent.$on('routeChangeSuccess', function() {
+            console.log ("CHANGE PARENT PARENT");
+           
+        });
+
         $scope.$on('$locationChangeSuccess', function() {
+            renderData ();
+           
+        });
+        }
+
+        // update the list of facets on route change
+        function renderData (){
             // create a query to get the list of facets
             hash = ($route.current.params.query || undefined);
             if (hash) {
@@ -1122,7 +1167,7 @@ angular
             query.setOption('wt', 'json');
             SolrSearchService.setQuery($scope.facetQuery, query);
             SolrSearchService.updateQuery($scope.facetQuery);
-        });
+        }
     };
 
     // initialize the controller
